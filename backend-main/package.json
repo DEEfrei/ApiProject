@@ -1,0 +1,25 @@
+{
+  "name": "backend-main",
+  "version": "1.0.0",
+  "description": "CinéMatch - Backend principal (Gateway REST, OAuth Google, JWT, orchestration microservices)",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
+    "test": "echo \"(optionnel) ajouter jest/supertest ici\" && exit 0"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
