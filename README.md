@@ -1,6 +1,6 @@
 # 🎬 CineMatch
 
-Movie recommendation and review platform — final project for the *API and Web Services* course (M1 Data Engineering / ML, EFREI Paris).
+Movie recommendation and review platform — final project for the *API and Web Services* course (M1 Data Engineering, EFREI Paris).
 
 CineMatch lets a user sign in with their Google account, browse a movie catalog enriched via the [TMDB](https://www.themoviedb.org/) API, rate and comment on movies, and get recommendations based on the genre of the movies they view.
 
