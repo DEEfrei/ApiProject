@@ -1,0 +1,100 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: cinematch-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: cinematch-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: cinematch_recommendations
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  service-reviews:
+    build: ./service-reviews
+    container_name: cinematch-service-reviews
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      PORT: 4001
+      NODE_ENV: production
+      MONGO_URI: mongodb://mongo:27017/cinematch_reviews
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "4001:4001"
+
+  service-recommendations:
+    build: ./service-recommendations
+    container_name: cinematch-service-recommendations
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 4002
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/cinematch_recommendations
+    command: sh -c "npx prisma migrate deploy && node src/index.js"
+    ports:
+      - "4002:4002"
+
+  backend-main:
+    build: ./backend-main
+    container_name: cinematch-backend-main
+    restart: unless-stopped
+    depends_on:
+      - service-reviews
+      - service-recommendations
+    environment:
+      PORT: 4000
+      NODE_ENV: production
+      FRONTEND_URL: http://localhost:5173
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: http://localhost:4000/auth/google/callback
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: 7d
+      SERVICE_REVIEWS_URL: http://service-reviews:4001
+      SERVICE_RECOMMENDATIONS_URL: http://service-recommendations:4002/graphql
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:4000
+    container_name: cinematch-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend-main
+    ports:
+      - "5173:80"
+
+volumes:
+  mongo-data:
+  postgres-data:
+  
