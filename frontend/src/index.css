@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Bebas Neue", "Arial Narrow", sans-serif;
+  --font-body: "Inter", system-ui, "Segoe UI", Roboto, sans-serif;
+
+  --color-ink: #14100e;
+  --color-ink-light: #1e1815;
+  --color-surface: #241d19;
+  --color-marquee: #c9a227;
+  --color-marquee-light: #e0c15a;
+  --color-velvet: #7a1f2b;
+  --color-velvet-light: #9c2c3a;
+  --color-cream: #f5efe6;
+  --color-muted: #a69a8d;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background-color: var(--color-ink);
+  color: var(--color-cream);
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
+}
+
+/* Badge "ticket de cinéma" pour les notes - bord perforé */
+.ticket-badge {
+  position: relative;
+  background: var(--color-marquee);
+  color: var(--color-ink);
+  clip-path: polygon(
+    0% 20%, 4% 0%, 96% 0%, 100% 20%,
+    100% 80%, 96% 100%, 4% 100%, 0% 80%
+  );
+}

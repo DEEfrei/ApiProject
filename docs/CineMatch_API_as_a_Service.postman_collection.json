@@ -1,0 +1,63 @@
+{
+  "info": {
+    "_postman_id": "cinematch-api-as-a-service-demo",
+    "name": "CineMatch - API as a Service (JWT Demo)",
+    "description": "Demo for the \"API as a Service\" requirement of the final project: an external call with a valid JWT (200 OK) and the same call without a JWT (401 Access Denied), on the dedicated route /api/external/reviews of service-reviews.\n\nBefore the demo:\n1. Set the collection variable `jwt_token` with a valid JWT signed by backend-main.\n2. Make sure `base_url` points to the correct URL for service-reviews (local: http://localhost:4001, or the Render URL in production).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "\u2705 With valid JWT (200 OK)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/external/reviews?movieId=1",
+          "host": ["{{base_url}}"],
+          "path": ["api", "external", "reviews"],
+          "query": [
+            {
+              "key": "movieId",
+              "value": "1",
+              "description": "Optional: filters reviews for a specific movie"
+            }
+          ]
+        },
+        "description": "Authenticated external call. Expected response: 200 OK with the list of reviews plus the requestedBy field proving the token was correctly decoded."
+      },
+      "response": []
+    },
+    {
+      "name": "\u274c Without JWT (401 Access Denied)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/external/reviews",
+          "host": ["{{base_url}}"],
+          "path": ["api", "external", "reviews"]
+        },
+        "description": "Same call, without the Authorization header. Expected response: 401 with a clear error message."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:4001",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "REPLACE_ME_WITH_A_REAL_JWT",
+      "type": "string"
+    }
+  ]
+}
