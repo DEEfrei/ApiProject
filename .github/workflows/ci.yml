@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  frontend:
+    name: Frontend — lint & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+        env:
+          VITE_API_URL: http://localhost:4000
+
+  backends:
+    name: Backend — ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [backend-main, service-reviews, service-recommendations]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: ${{ matrix.service }}/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ${{ matrix.service }}
+        run: npm ci
+
+      - name: Generate Prisma client
+        if: matrix.service == 'service-recommendations'
+        working-directory: ${{ matrix.service }}
+        run: npx prisma generate
+
+      - name: Syntax check
+        working-directory: ${{ matrix.service }}
+        run: |
+          find src -name "*.js" -print0 | xargs -0 -n1 node --check
+          echo "Tous les fichiers source sont syntaxiquement valides."
+
+  e2e:
+    name: End-to-end — stack Docker complète
+    runs-on: ubuntu-latest
+    needs: [frontend, backends]
+    env:
+      JWT_SECRET: ci-secret-not-used-in-production
+      GOOGLE_CLIENT_ID: dummy-client-id
+      GOOGLE_CLIENT_SECRET: dummy-client-secret
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build & start the whole stack
+        run: docker compose up --build -d
+
+      - name: Wait for services to be ready
+        run: |
+          for url in \
+            http://localhost:4000/health \
+            http://localhost:4001/health \
+            http://localhost:4002/health \
+            http://localhost:5173
+          do
+            echo "En attente de $url ..."
+            for i in $(seq 1 30); do
+              if curl -sf "$url" > /dev/null; then
+                echo "  OK"
+                break
+              fi
+              if [ "$i" -eq 30 ]; then
+                echo "  ÉCHEC : $url ne répond pas après 60s"
+                docker compose logs
+                exit 1
+              fi
+              sleep 2
+            done
+          done
+
+      - name: GraphQL — service-recommendations répond
+        run: |
+          response=$(curl -sf -X POST http://localhost:4002/graphql \
+            -H "Content-Type: application/json" \
+            -d '{"query":"query { movies { id title } }"}')
+          echo "$response"
+          echo "$response" | grep -q '"movies"' || {
+            echo "La query GraphQL n'a pas renvoyé le champ movies"
+            exit 1
+          }
+
+      - name: REST — le gateway agrège les microservices
+        run: curl -sf http://localhost:4000/api/movies
+
+      - name: API as a Service — sans JWT doit renvoyer 401
+        run: |
+          status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4001/api/external/reviews)
+          echo "Status reçu : $status"
+          [ "$status" = "401" ] || {
+            echo "Attendu 401 sans token, reçu $status"
+            exit 1
+          }
+
+      - name: API as a Service — avec JWT valide doit renvoyer 200
+        run: |
+          token=$(docker compose exec -T backend-main node -e "
+            const jwt = require('jsonwebtoken');
+            console.log(jwt.sign(
+              { sub: 'ci-user', name: 'CI', email: 'ci@example.com' },
+              process.env.JWT_SECRET,
+              { expiresIn: '5m' }
+            ));
+          " | tr -d '\r')
+
+          status=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $token" \
+            http://localhost:4001/api/external/reviews)
+          echo "Status reçu : $status"
+          [ "$status" = "200" ] || {
+            echo "Attendu 200 avec un token valide, reçu $status"
+            exit 1
+          }
+
+      - name: Logs des conteneurs (si échec)
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+        
