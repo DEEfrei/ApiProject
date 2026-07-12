@@ -3,7 +3,6 @@ import { fetchCurrentUser } from '../api/movies'
 import { useAuth } from '../context/AuthContext'
 import ErrorBanner from '../components/ErrorBanner'
 
-// Page protégée (voir PrivateRoute) : accessible uniquement si connecté.
 export default function Profile() {
   const { user: tokenUser } = useAuth()
   const [profile, setProfile] = useState(null)
@@ -27,24 +26,36 @@ export default function Profile() {
     }
   }, [])
 
-  return (
-    <div className="mx-auto max-w-md px-4 py-8">
-      <h1 className="mb-4 text-2xl font-semibold text-slate-900">Mon profil</h1>
+  const displayName = profile?.name || tokenUser?.name
+  const displayEmail = profile?.email || tokenUser?.email
+  const picture = profile?.picture || tokenUser?.picture
 
-      {error && <ErrorBanner error={error} />}
+  return (
+    <div className="mx-auto max-w-md px-4 py-16">
+      <p className="text-xs uppercase tracking-[0.3em] text-marquee-light">Ta fiche</p>
+      <h1 className="mt-1 font-display text-3xl tracking-wide text-cream">Mon profil</h1>
+
+      {error && (
+        <div className="mt-6">
+          <ErrorBanner error={error} />
+        </div>
+      )}
 
       {loading ? (
-        <p className="text-slate-500">Chargement...</p>
+        <p className="mt-6 text-muted">Chargement...</p>
       ) : (
-        <div className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-700">
-          <p>
-            <span className="font-medium">Nom : </span>
-            {profile?.name || tokenUser?.name || '—'}
-          </p>
-          <p>
-            <span className="font-medium">Email : </span>
-            {profile?.email || tokenUser?.email || '—'}
-          </p>
+        <div className="mt-6 flex items-center gap-4 rounded-lg border border-cream/10 bg-surface p-5">
+          {picture ? (
+            <img src={picture} alt={displayName} className="h-14 w-14 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-velvet text-lg font-semibold text-cream">
+              {displayName?.[0]?.toUpperCase() || '?'}
+            </div>
+          )}
+          <div>
+            <p className="font-medium text-cream">{displayName || '—'}</p>
+            <p className="text-sm text-muted">{displayEmail || '—'}</p>
+          </div>
         </div>
       )}
     </div>

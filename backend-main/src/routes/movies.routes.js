@@ -60,4 +60,13 @@ router.post('/:id/reviews', requireAuth, async (req, res, next) => {
   }
 })
 
+router.get('/:id/similar', async (req, res, next) => {
+  try {
+    const similar = await recommendations.getSimilarMovies(req.params.id)
+    res.json(similar)
+  } catch (err) {
+    next(err)
+  }
+})
+
 module.exports = router

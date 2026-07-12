@@ -25,6 +25,8 @@ async function listMovies({ search } = {}) {
         id
         title
         posterUrl
+        genre
+        releaseYear
       }
     }
   `
@@ -40,6 +42,8 @@ async function getMovieById(id) {
         title
         synopsis
         posterUrl
+        genre
+        releaseYear
       }
     }
   `
@@ -47,4 +51,19 @@ async function getMovieById(id) {
   return data.movie
 }
 
-module.exports = { listMovies, getMovieById }
+async function getSimilarMovies(id) {
+  const query = `
+    query SimilarMovies($movieId: ID!) {
+      similarMovies(movieId: $movieId) {
+        id
+        title
+        posterUrl
+        genre
+      }
+    }
+  `
+  const data = await graphqlRequest(query, { movieId: id })
+  return data.similarMovies
+}
+
+module.exports = { listMovies, getMovieById, getSimilarMovies }
